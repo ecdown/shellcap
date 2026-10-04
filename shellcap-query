@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+#######################################################################
+#
+# Name: shellcap-query
+#
+# Description: Query shell database for session entries and shell commands
+#
+# Date: 2026-10-01 Eric Downing <ecdown@etechtips.com>
+#
+#######################################################################
+import sys
+import argparse
+import sqlite3
+import os
+
+########################### Utility ###################################
+def db_conn():
+    """
+       Looks up database from either SHELLCAP_DB or default shellcap path
+
+       Parameters:
+           None
+
+       Returns:
+           db connection
+    """
+    db = os.environ.get('SHELLCAP_DB', os.path.expanduser('~/.local/share/shellcap/shellcap.db'))
+    conn = sqlite3.connect(db)
+ 
+    return conn
+
+
+def db_close(conn):
+    """ 
+        Closes connection to database. 
+    """
+    conn.close()
+
+########################## Main Functions #############################
+def get_sessions( limit):
+    """
+        Gets list of Sessions from database
+
+        Parameters: 
+            limit
+
+        Returns: 
+            prints to screen list of sessions 
+
+    """
+#    db = os.environ.get('SHELLCAP_DB', os.path.expanduser('~/.local/share/shellcap/shellcap.db'))
+#    conn = sqlite3.connect(db)
+    conn = db_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute('''SELECT s.session_id, s.tty, s.user, s.login_time, s.ssh_client, s.ip
+               FROM sessions s
+               ORDER BY s.login_time DESC
+               LIMIT ?''', (limit,))
+        sessions = cur.fetchall()
+        print('Sessions:')
+        for i,(sid,tty,user,lt,ssh,ip) in enumerate(sessions[:20],1):
+            print(f"{i}. {sid[:8]}... tty={tty} user={user} login={lt} ssh={ssh}")
+            print(f"{i}. {sid[:8]}... tty={tty} user={user} login={lt} ssh={ssh}")
+
+    except Exception as e:
+            print(e)
+    finally:
+            db_close(conn)
+            #conn.close()
+
+def session_commands(args):
+    """
+        Gets list of commands based on session id
+
+        Parameters:
+             args - list of all args passed to script
+
+        Returns:
+            prints list of matching commands from session
+
+    """
+    db = os.environ.get('SHELLCAP_DB', os.path.expanduser('~/.local/share/shellcap/shellcap.db'))
+    conn = sqlite3.connect(db)
+    cur = conn.cursor()
+    if args.id and len(args.id) == 8:
+        # try prefix
+        try:
+            cur.execute('SELECT session_id FROM sessions WHERE session_id LIKE ?', (args.id +'%',))
+            m = cur.fetchone()
+            if m: 
+                sid = m[0]
+                cur.execute('''SELECT executed_at, cwd, command, exit_code
+                    FROM commands WHERE session_id=? ORDER BY executed_at''', (sid,))
+                for ts,cwd,cmd,ec in cur.fetchall():
+                    if args.all:
+                        print(f"{ts} [{cwd}] ({ec}) {cmd}")
+                    else:
+                        print(f"{cmd}")
+        except Exception as e:
+            print(e)
+        finally:
+            conn.close()
+    else: 
+        print(f"No Session: {args.id} found.\n")
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--id', default=None,help='Session ID')
+    parser.add_argument('--sessions', action="store_true",default=False,help='Session ID')
+    parser.add_argument('--all', action="store_true",default=False,help='All Fields')
+    parser.add_argument('--limit', default=10,help='All Fields')
+    args = parser.parse_args()
+ 
+    if args.id:
+        session_commands(args)
+    else:
+        get_sessions(args.limit)
+
