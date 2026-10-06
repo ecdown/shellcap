@@ -31,7 +31,22 @@ _scap_zsh_should_log() {
   if [ "${SHELLCAP_SKIP_ROOT:-1}" = "1" ] && [ "$(id -u)" -eq 0 ]; then
     return 1
   fi
+  _scap_zsh_is_paused && return 1
   return 0
+}
+
+
+_scap_zsh_is_paused() {
+  [ "${SHELLCAP_PAUSED:-0}" = "1" ] && return 0
+  local state_dir="${SHELLCAP_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/shellcap}"
+  [ -f "$state_dir/paused/global" ] && return 0
+  [ -n "${SHELLCAP_SESSION_ID:-}" ] && [ -f "$state_dir/paused/${SHELLCAP_SESSION_ID}" ] && return 0
+  return 1
+}
+
+_scap_zsh_create_state_dir() {
+  local state_dir="${SHELLCAP_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/shellcap}"
+  mkdir -p "$state_dir/paused" 2>/dev/null || true
 }
 
 _scap_zsh_preexec() {
@@ -72,3 +87,55 @@ if _scap_zsh_should_log; then
   add-zsh-hook preexec _scap_zsh_preexec
   add-zsh-hook precmd _scap_zsh_precmd
 fi
+
+
+shellcap_pause() {
+  _scap_zsh_create_state_dir
+  local state_dir="${SHELLCAP_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/shellcap}"
+  if [ "$1" = "--global" ] || [ "$1" = "-g" ]; then
+    touch "$state_dir/paused/global"
+    echo "shellcap paused (global)"
+    return 0
+  fi
+  if [ -n "${SHELLCAP_SESSION_ID:-}" ]; then
+    touch "$state_dir/paused/${SHELLCAP_SESSION_ID}"
+    echo "shellcap paused (this session)"
+    return 0
+  fi
+  touch "$state_dir/paused/global"
+  echo "shellcap paused (global)"
+}
+
+shellcap_unpause() {
+  local state_dir="${SHELLCAP_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/shellcap}"
+  if [ "$1" = "--global" ] || [ "$1" = "-g" ]; then
+    rm -f "$state_dir/paused/global" 2>/dev/null || true
+    echo "shellcap unpaused (global)"
+    return 0
+  fi
+  if [ "$1" = "--all" ] || [ "$1" = "-a" ]; then
+    rm -rf "$state_dir/paused" 2>/dev/null || true
+    mkdir -p "$state_dir/paused" 2>/dev/null || true
+    echo "shellcap unpaused (all sessions)"
+    return 0
+  fi
+  if [ -n "${SHELLCAP_SESSION_ID:-}" ]; then
+    rm -f "$state_dir/paused/${SHELLCAP_SESSION_ID}" 2>/dev/null || true
+  fi
+  rm -f "$state_dir/paused/global" 2>/dev/null || true
+  echo "shellcap unpaused"
+}
+
+shellcap_status() {
+  local state_dir="${SHELLCAP_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/shellcap}"
+  if [ -f "$state_dir/paused/global" ]; then
+    echo "shellcap: paused (global)"
+    return 0
+  fi
+  if [ -n "${SHELLCAP_SESSION_ID:-}" ] && [ -f "$state_dir/paused/${SHELLCAP_SESSION_ID}" ]; then
+    echo "shellcap: paused (this session)"
+    return 0
+  fi
+  echo "shellcap: active"
+}
+

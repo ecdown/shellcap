@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+state_dir="${SHELLCAP_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/shellcap}"
+
+case "${1:-status}" in
+  status|st)
+    if [ -f "$state_dir/paused/global" ]; then
+      echo "shellcap: paused (global)"
+      exit 0
+    fi
+    if [ -n "${SHELLCAP_SESSION_ID:-}" ] && [ -f "$state_dir/paused/${SHELLCAP_SESSION_ID}" ]; then
+      echo "shellcap: paused (this session)"
+      exit 0
+    fi
+    echo "shellcap: active"
+    exit 0
+    ;;
+  paused)
+    if [ -f "$state_dir/paused/global" ]; then
+      exit 0
+    fi
+    if [ -n "${SHELLCAP_SESSION_ID:-}" ] && [ -f "$state_dir/paused/${SHELLCAP_SESSION_ID}" ]; then
+      exit 0
+    fi
+    exit 1
+    ;;
+  active)
+    if [ -f "$state_dir/paused/global" ]; then
+      exit 1
+    fi
+    if [ -n "${SHELLCAP_SESSION_ID:-}" ] && [ -f "$state_dir/paused/${SHELLCAP_SESSION_ID}" ]; then
+      exit 1
+    fi
+    exit 0
+    ;;
+  *)
+    echo "Usage: shellcap-state [status|paused|active]" >&2
+    exit 1
+    ;;
+esac

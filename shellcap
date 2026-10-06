@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# shellcap command wrapper
+
+cmd="${1:-}"
+shift || true
+
+case "$cmd" in
+  pause)
+    exec "$(dirname "$0")/shellcap-pause" "$@"
+    ;;
+  unpause|resume)
+    exec "$(dirname "$0")/shellcap-unpause" "$@"
+    ;;
+  status)
+    exec "$(dirname "$0")/shellcap-status" "$@"
+    ;;
+  query)
+    exec "$(dirname "$0")/shellcap-query" "$@"
+    ;;
+  state)
+    exec "$(dirname "$0")/shellcap-state" "$@"
+    ;;
+  *)
+    echo "Usage: shellcap <pause|unpause|resume|status|query> [args...]" >&2
+    echo "       shellcap-pause/shellcap-unpause/shellcap-status also available" >&2
+    exit 1
+    ;;
+esac

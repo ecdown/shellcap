@@ -236,3 +236,32 @@ Indexes: `idx_commands_session` (session_id), `idx_commands_time` (executed_at),
 - Secret masking is heuristic; treat the database as sensitive regardless of the setting.
 - To remove shellcap, delete the installed files, the source lines added to `~/.bashrc`/`~/.zshrc`, and optionally `~/.local/share/shellcap/`.
 - Be aware of local policies/regulations regarding command logging.
+## Pause/Unpause
+
+You can temporarily pause capture in the current shell session or globally:
+
+```bash
+# Pause current session
+shellcap pause
+
+# Unpause
+shellcap unpause
+
+# Check status
+shellcap status
+
+# Pause/unpause globally (affects all sessions)
+shellcap pause --global
+shellcap unpause --global
+
+# Unpause everything
+shellcap unpause --all
+
+# Also available as standalone commands
+shellcap-pause
+shellcap-unpause
+shellcap-status
+shellcap-state status
+```
+
+The pause state is tracked via files in `~/.local/state/shellcap/paused/` (or `$SHELLCAP_STATE_DIR/paused/`). A session-specific marker is created for the current terminal; global pause takes precedence if set.

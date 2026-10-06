@@ -14,6 +14,15 @@ fi
 
 echo "Using Python: $PYTHON ($($PYTHON --version 2>&1))"
 
+# Portable in-place sed (GNU sed: -i, BSD/macOS sed: -i '')
+sed_inplace() {
+  if sed --version >/dev/null 2>&1; then
+    sed -i "$@"
+  else
+    sed -i '' "$@"
+  fi
+}
+
 # Check for sqlite3 availability (CLI) - optional, we use Python's sqlite3
 if ! command -v sqlite3 >/dev/null 2>&1; then
   echo "Warning: sqlite3 CLI not found. Queries can still be made via 'shellcap-query' or Python."
@@ -39,8 +48,8 @@ chmod +x "$PREFIX_LIB/shellcap_log.py"
 chmod +x "$PREFIX_BIN/shellcap-query"
 
 # Update shebangs to use detected Python
-sed -i "1s|^#!.*python.*|#!$PYTHON|" "$PREFIX_LIB/shellcap_log.py"
-sed -i "1s|^#!.*python.*|#!$PYTHON|" "$PREFIX_BIN/shellcap-query"
+sed_inplace "1s|^#!.*python.*|#!/usr/bin/env $PYTHON|" "$PREFIX_LIB/shellcap_log.py"
+sed_inplace "1s|^#!.*python.*|#!/usr/bin/env $PYTHON|" "$PREFIX_BIN/shellcap-query"
 
 # Install bash integration if not present
 if [ -f "$HOME/.bashrc" ]; then
@@ -90,3 +99,23 @@ fi
 echo "Installation complete!"
 echo "Database will be stored at: $HOME/.local/share/shellcap/shellcap.db"
 echo "Start a new shell session to begin logging."
+
+# Install pause/unpause scripts
+cp shellcap-pause "$PREFIX_BIN/" 2>/dev/null || true
+cp shellcap-unpause "$PREFIX_BIN/" 2>/dev/null || true
+cp shellcap-status "$PREFIX_BIN/" 2>/dev/null || true
+cp shellcap "$PREFIX_BIN/" 2>/dev/null || true
+
+chmod +x "$PREFIX_BIN/shellcap-pause" 2>/dev/null || true
+chmod +x "$PREFIX_BIN/shellcap-unpause" 2>/dev/null || true
+chmod +x "$PREFIX_BIN/shellcap-status" 2>/dev/null || true
+chmod +x "$PREFIX_BIN/shellcap" 2>/dev/null || true
+
+# Update shebangs if needed
+sed_inplace "1s|^#!.*bash.*|#!/usr/bin/env bash|" "$PREFIX_BIN/shellcap-pause" 2>/dev/null || true
+sed_inplace "1s|^#!.*bash.*|#!/usr/bin/env bash|" "$PREFIX_BIN/shellcap-unpause" 2>/dev/null || true
+sed_inplace "1s|^#!.*bash.*|#!/usr/bin/env bash|" "$PREFIX_BIN/shellcap-status" 2>/dev/null || true
+sed_inplace "1s|^#!.*bash.*|#!/usr/bin/env bash|" "$PREFIX_BIN/shellcap" 2>/dev/null || true
+cp shellcap-state "$PREFIX_BIN/" 2>/dev/null || true
+chmod +x "$PREFIX_BIN/shellcap-state" 2>/dev/null || true
+sed_inplace "1s|^#!.*bash.*|#!/usr/bin/env bash|" "$PREFIX_BIN/shellcap-state" 2>/dev/null || true

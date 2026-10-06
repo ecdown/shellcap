@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+state_dir="${SHELLCAP_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/shellcap}"
+mkdir -p "$state_dir/paused" 2>/dev/null || true
+
+case "${1:-}" in
+  --global|-g)
+    touch "$state_dir/paused/global"
+    echo "shellcap paused (global)"
+    exit 0
+    ;;
+  --session|-s)
+    sess="${2:-${SHELLCAP_SESSION_ID:-}}"
+    if [ -z "$sess" ]; then
+      echo "Error: no session ID specified (use --session ID or set SHELLCAP_SESSION_ID)" >&2
+      exit 1
+    fi
+    touch "$state_dir/paused/$sess"
+    echo "shellcap paused (session $sess)"
+    exit 0
+    ;;
+  *)
+    if [ -n "${SHELLCAP_SESSION_ID:-}" ]; then
+      touch "$state_dir/paused/${SHELLCAP_SESSION_ID}"
+      echo "shellcap paused (this session)"
+      exit 0
+    fi
+    touch "$state_dir/paused/global"
+    echo "shellcap paused (global)"
+    exit 0
+    ;;
+esac
