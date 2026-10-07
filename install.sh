@@ -96,10 +96,6 @@ else
   echo "Note: Add 'source ~/.config/shellcap/shellcap.zsh' to your ~/.zshrc if using zsh"
 fi
 
-echo "Installation complete!"
-echo "Database will be stored at: $HOME/.local/share/shellcap/shellcap.db"
-echo "Start a new shell session to begin logging."
-
 # Install pause/unpause scripts
 cp shellcap-pause "$PREFIX_BIN/" 2>/dev/null || true
 cp shellcap-unpause "$PREFIX_BIN/" 2>/dev/null || true
@@ -119,3 +115,45 @@ sed_inplace "1s|^#!.*bash.*|#!/usr/bin/env bash|" "$PREFIX_BIN/shellcap" 2>/dev/
 cp shellcap-state "$PREFIX_BIN/" 2>/dev/null || true
 chmod +x "$PREFIX_BIN/shellcap-state" 2>/dev/null || true
 sed_inplace "1s|^#!.*bash.*|#!/usr/bin/env bash|" "$PREFIX_BIN/shellcap-state" 2>/dev/null || true
+
+# Ensure ~/.local/bin is in PATH
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+  added_path=false
+  # Try zshrc first (default on macOS)
+  if [ -f "$HOME/.zshrc" ]; then
+    if ! grep -q '\$HOME/\.local/bin\|~/.local/bin' "$HOME/.zshrc" 2>/dev/null; then
+      echo '
+# Add ~/.local/bin to PATH for shellcap
+export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
+      echo "Added ~/.local/bin to PATH in ~/.zshrc"
+      added_path=true
+    fi
+  fi
+  # Try bashrc
+  if [ -f "$HOME/.bashrc" ]; then
+    if ! grep -q '\$HOME/\.local/bin\|~/.local/bin' "$HOME/.bashrc" 2>/dev/null; then
+      echo '
+# Add ~/.local/bin to PATH for shellcap
+export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+      echo "Added ~/.local/bin to PATH in ~/.bashrc"
+      added_path=true
+    fi
+  fi
+  # Fallback to bash_profile if no bashrc
+  if [ ! -f "$HOME/.bashrc" ] && [ -f "$HOME/.bash_profile" ]; then
+    if ! grep -q '\$HOME/\.local/bin\|~/.local/bin' "$HOME/.bash_profile" 2>/dev/null; then
+      echo '
+# Add ~/.local/bin to PATH for shellcap
+export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bash_profile"
+      echo "Added ~/.local/bin to PATH in ~/.bash_profile"
+      added_path=true
+    fi
+  fi
+  if [ "$added_path" = false ]; then
+    echo "Note: ~/.local/bin is not in your PATH. Add 'export PATH=\"\$HOME/.local/bin:\$PATH\"' to your shell rc file."
+  fi
+fi
+
+echo "Installation complete!"
+echo "Database will be stored at: $HOME/.local/share/shellcap/shellcap.db"
+echo "Start a new shell session to begin logging."
